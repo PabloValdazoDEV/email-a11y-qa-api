@@ -1,0 +1,58 @@
+{
+  "name": "template-auth-back",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reusable authentication API with Express, Prisma, MySQL and PostgreSQL",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "lint": "eslint .",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "prisma:generate": "prisma generate",
+    "prisma:generate:mysql": "prisma generate --schema prisma/schema.prisma",
+    "prisma:generate:postgres": "prisma generate --schema prisma/postgresql/schema.prisma",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:mysql": "prisma migrate dev --schema prisma/schema.prisma",
+    "prisma:migrate:postgres": "prisma migrate dev --schema prisma/postgresql/schema.prisma",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:deploy:mysql": "prisma migrate deploy --schema prisma/schema.prisma",
+    "prisma:deploy:postgres": "prisma migrate deploy --schema prisma/postgresql/schema.prisma",
+    "prisma:studio": "prisma studio",
+    "prisma:studio:mysql": "prisma studio --schema prisma/schema.prisma",
+    "prisma:studio:postgres": "prisma studio --schema prisma/postgresql/schema.prisma",
+    "prisma:validate:mysql": "prisma validate --schema prisma/schema.prisma",
+    "prisma:validate:postgres": "prisma validate --schema prisma/postgresql/schema.prisma",
+    "seed": "prisma db seed",
+    "seed:mysql": "prisma db seed --schema prisma/schema.prisma",
+    "seed:postgres": "prisma db seed --schema prisma/postgresql/schema.prisma"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "6.12.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "9.0.6",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "eslint": "^9.35.0",
+    "globals": "^16.3.0",
+    "jest": "^30.1.3",
+    "nodemon": "^3.1.10",
+    "prisma": "6.12.0",
+    "supertest": "^7.1.4"
+  }
+}

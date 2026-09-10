@@ -11,6 +11,7 @@ import {
   organizationParamsSchema,
 } from "../utils/organizationValidation.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { membersRouter } from "./members.routes.js";
 
 export const organizationsRouter = Router();
 
@@ -26,3 +27,4 @@ organizationsRouter.get(
   validate(organizationParamsSchema, "params"),
   asyncHandler(getOrganization),
 );
+organizationsRouter.use("/:organizationId/members", membersRouter);

@@ -211,8 +211,13 @@ Todas las respuestas sensibles llevan `Cache-Control: no-store`.
 | `POST` | `/api/v1/organizations` | Autenticado y sin organización | Crea una organización y asigna al usuario como `OWNER` |
 | `GET` | `/api/v1/organizations` | Autenticado | Lista la organización del usuario |
 | `GET` | `/api/v1/organizations/:id` | Miembro | Obtiene una organización sin permitir acceso cruzado |
+| `GET` | `/api/v1/organizations/:organizationId/members` | Miembro | Lista los miembros y sus roles de organización |
+| `PATCH` | `/api/v1/organizations/:organizationId/members/:membershipId` | `OWNER` / `ADMIN` de organización | Cambia un rol permitido sin modificar el rol global |
+| `DELETE` | `/api/v1/organizations/:organizationId/members/:membershipId` | `OWNER` / `ADMIN` de organización | Elimina exclusivamente la membership permitida |
 
 No existe endpoint de registro público. Las primeras cuentas se crean mediante el seed y, a partir de ahí, un `ADMIN` o `SUPERADMIN` concede acceso desde `POST /users`. La API genera una contraseña interna que no se entrega ni permite entrar, guarda únicamente el hash de la invitación y envía un enlace de un solo uso para que la persona defina su propia contraseña. Solo un `SUPERADMIN` puede crear, asignar o modificar el rol `SUPERADMIN`. Ningún administrador puede desactivarse ni cambiar su propio rol.
+
+Los roles globales `USER`, `ADMIN` y `SUPERADMIN` son independientes de `MembershipRole`. Dentro de una organización, `OWNER` puede gestionar `ADMIN`, `EDITOR` y `VIEWER`; un `ADMIN` de organización solo puede alternar o eliminar `EDITOR` y `VIEWER`. `OWNER` nunca puede reasignarse ni eliminarse mediante estas rutas. Todas las operaciones comprueban conjuntamente la organización solicitada, la membership del actor y la membership objetivo.
 
 ## Arquitectura de autenticación
 

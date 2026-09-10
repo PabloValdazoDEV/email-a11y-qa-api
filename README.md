@@ -220,6 +220,11 @@ Todas las respuestas sensibles llevan `Cache-Control: no-store`.
 | `GET` | `/api/v1/clients/:clientId` | Miembro de su organización | Consulta un cliente activo sin permitir acceso cruzado |
 | `PATCH` | `/api/v1/clients/:clientId` | `OWNER` / `ADMIN` de su organización | Modifica el nombre del cliente |
 | `DELETE` | `/api/v1/clients/:clientId` | `OWNER` / `ADMIN` de su organización | Archiva el cliente sin eliminarlo físicamente |
+| `GET` | `/api/v1/clients/:clientId/campaigns` | Miembro de su organización | Lista las campañas activas del cliente activo |
+| `POST` | `/api/v1/clients/:clientId/campaigns` | `OWNER` / `ADMIN` de su organización | Crea una campaña dentro del cliente activo |
+| `GET` | `/api/v1/campaigns/:campaignId` | Miembro de su organización | Consulta una campaña activa mediante su cliente propietario |
+| `PATCH` | `/api/v1/campaigns/:campaignId` | `OWNER` / `ADMIN` de su organización | Modifica el nombre de la campaña |
+| `DELETE` | `/api/v1/campaigns/:campaignId` | `OWNER` / `ADMIN` de su organización | Archiva la campaña sin eliminarla físicamente |
 
 No existe endpoint de registro público. Las primeras cuentas se crean mediante el seed y, a partir de ahí, un `ADMIN` o `SUPERADMIN` concede acceso desde `POST /users`. La API genera una contraseña interna que no se entrega ni permite entrar, guarda únicamente el hash de la invitación y envía un enlace de un solo uso para que la persona defina su propia contraseña. Solo un `SUPERADMIN` puede crear, asignar o modificar el rol `SUPERADMIN`. Ningún administrador puede desactivarse ni cambiar su propio rol.
 
@@ -234,6 +239,12 @@ Un `OWNER` puede invitar `ADMIN`, `EDITOR` o `VIEWER`. Un `ADMIN` de organizaci�
 Cada `Client` pertenece obligatoriamente a una única organización. Su nombre admite hasta 120 caracteres y `archivedAt` implementa el archivado lógico: `DELETE` conserva la fila y los listados, consultas y escrituras normales excluyen clientes archivados. No existe restauración ni listado de archivados en este hito.
 
 Todos los miembros pueden listar y consultar clientes de su propia organización. Solamente `OWNER` y `ADMIN` de organización pueden crear, editar o archivar; `EDITOR` y `VIEWER` tienen acceso de lectura. Estas decisiones ignoran el rol global y cada consulta valida conjuntamente el usuario autenticado, la organización propietaria y el cliente solicitado.
+
+## Campañas de cliente
+
+Cada `Campaign` pertenece obligatoriamente a un único `Client`. `archivedAt` implementa el archivado lógico y los endpoints normales excluyen campañas archivadas y campañas cuyo cliente esté archivado. Archivar un cliente conserva todas sus campañas; la clave foránea usa `ON DELETE RESTRICT` para evitar borrados físicos en cascada.
+
+Todos los roles de organización pueden listar y consultar campañas del cliente al que pertenecen. Solamente `OWNER` y `ADMIN` pueden crear, cambiar el nombre o archivar. El backend no utiliza roles globales para autorizar estas operaciones y valida siempre la cadena `Campaign → Client → Organization → Membership`. `clientId` procede exclusivamente de la URL y no puede modificarse mediante el body.
 
 ## Arquitectura de autenticación
 
@@ -291,7 +302,7 @@ Cambiar el email exige la contraseña actual, vuelve a marcarlo como no verifica
 npm test
 ```
 
-Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, organizaciones, memberships, invitaciones, clientes, archivado lógico y aislamiento multi-tenant. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución, no envían correos y no emplean datos de producción.
+Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, organizaciones, memberships, invitaciones, clientes, campañas, archivado lógico y aislamiento multi-tenant. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución, no envían correos y no emplean datos de producción. Las migraciones y el comportamiento transaccional se comprueban además contra PostgreSQL real sin conservar datos de prueba.
 
 ## Despliegue detrás de proxy
 

@@ -15,6 +15,7 @@ import {
   organizationClientsParamsSchema,
   updateClientSchema,
 } from "../utils/clientValidation.js";
+import { clientCampaignsRouter } from "./campaigns.routes.js";
 
 export const organizationClientsRouter = Router({ mergeParams: true });
 
@@ -33,6 +34,7 @@ organizationClientsRouter.post(
 export const clientsRouter = Router();
 
 clientsRouter.use(authMiddleware);
+clientsRouter.use("/:clientId/campaigns", clientCampaignsRouter);
 clientsRouter.get("/:clientId", validate(clientParamsSchema, "params"), asyncHandler(getClient));
 clientsRouter.patch(
   "/:clientId",

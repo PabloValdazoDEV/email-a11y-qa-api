@@ -118,6 +118,19 @@ model Client {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaigns      Campaign[]
 
   @@index([organizationId, archivedAt])
+}
+
+model Campaign {
+  id         String   @id @default(uuid()) @db.Uuid
+  clientId   String   @db.Uuid
+  name       String   @db.VarChar(120)
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, archivedAt])
 }

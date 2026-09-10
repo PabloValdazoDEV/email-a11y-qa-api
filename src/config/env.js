@@ -9,7 +9,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   BIND_HOST: z.string().min(1).default("127.0.0.1"),
-  DATABASE_PROVIDER: z.enum(["mysql", "postgresql"]).default("mysql"),
+  DATABASE_PROVIDER: z.literal("postgresql").default("postgresql"),
   DATABASE_URL: z.string().min(1),
   FRONTEND_URL: z.string().url(),
   CORS_ALLOWED_ORIGINS: z.string().min(1),
@@ -68,10 +68,9 @@ if (!allowedOrigins.includes(frontendUrl)) {
   throw new Error("FRONTEND_URL must be included in CORS_ALLOWED_ORIGINS");
 }
 
-const databaseUrlMatchesProvider =
-  (parsed.data.DATABASE_PROVIDER === "mysql" && parsed.data.DATABASE_URL.startsWith("mysql://")) ||
-  (parsed.data.DATABASE_PROVIDER === "postgresql" &&
-    /^(postgresql|postgres):\/\//.test(parsed.data.DATABASE_URL));
+const databaseUrlMatchesProvider = /^(postgresql|postgres):\/\//.test(
+  parsed.data.DATABASE_URL,
+);
 
 if (!databaseUrlMatchesProvider) {
   throw new Error("DATABASE_PROVIDER does not match the protocol used in DATABASE_URL");

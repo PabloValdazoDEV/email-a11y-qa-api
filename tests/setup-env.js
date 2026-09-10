@@ -1,6 +1,6 @@
 process.env.NODE_ENV = "test";
-process.env.DATABASE_PROVIDER = "mysql";
-process.env.DATABASE_URL = "mysql://root:test@localhost:3306/auth_template_test";
+process.env.DATABASE_PROVIDER = "postgresql";
+process.env.DATABASE_URL = "postgresql://postgres:test@localhost:5432/email_a11y_qa_test?schema=public";
 process.env.FRONTEND_URL = "http://localhost:5173";
 process.env.CORS_ALLOWED_ORIGINS = "http://localhost:5173";
 process.env.JWT_SECRET = "test-only-secret-with-more-than-32-bytes-long";

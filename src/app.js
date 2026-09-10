@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { globalLimiter } from "./middleware/rateLimits.js";
 import { requireJson } from "./middleware/requireJson.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { organizationsRouter } from "./routes/organizations.routes.js";
 import { usersRouter } from "./routes/users.routes.js";
 
 export function createApp() {
@@ -37,6 +38,7 @@ export function createApp() {
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/auth", authRouter);
   app.use("/users", usersRouter);
+  app.use("/api/v1/organizations", organizationsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

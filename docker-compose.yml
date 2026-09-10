@@ -3,11 +3,11 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-auth_template}
+      POSTGRES_DB: ${POSTGRES_DB:-email_a11y_qa}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

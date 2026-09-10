@@ -1,11 +1,11 @@
-# Auth Template API
+# Email A11y QA API
 
-Backend reutilizable de autenticación privada para proyectos React. Incluye acceso exclusivamente por invitación, verificación de email, sesiones cortas y recordadas, recuperación de contraseña, perfil, roles y administración de usuarios. Está pensado para dashboards y aplicaciones de negocio de clientes; no contiene lógica de negocio ni autorregistro público.
+Backend de Email A11y QA. Incluye autenticación privada por invitación, verificación de email, sesiones, recuperación de contraseña, administración de usuarios y organizaciones aisladas por membership.
 
 ## Stack
 
 - Node.js 20+, Express 5 y JavaScript ESM
-- MySQL 8 por defecto o PostgreSQL 17 mediante Docker, ambos con Prisma ORM
+- PostgreSQL 17 y Prisma ORM
 - JWT HS256 solo para access tokens
 - Refresh, reset y verificación mediante tokens opacos
 - bcrypt, Zod, Helmet, CORS, rate limiting y Nodemailer
@@ -15,68 +15,11 @@ Backend reutilizable de autenticación privada para proyectos React. Incluye acc
 
 - Node.js 20 o posterior
 - npm
-- MySQL 8 instalado y una base vacía, para la opción predeterminada
-- Docker con Compose únicamente si se elige PostgreSQL
+- PostgreSQL 17 o Docker con Compose
 
-## Elegir base de datos
+## Instalación con PostgreSQL
 
-La plantilla soporta los dos proveedores, pero **MySQL es el predeterminado**. Prisma necesita generar su cliente con el mismo esquema que se usará en ejecución; no cambies solo la URL.
-
-| Proveedor | Esquema | Migraciones | Infraestructura local |
-| --- | --- | --- | --- |
-| MySQL, predeterminado | `prisma/schema.prisma` | `prisma/migrations` | Tu servidor MySQL; no se inicia PostgreSQL |
-| PostgreSQL | `prisma/postgresql/schema.prisma` | `prisma/postgresql/migrations` | `docker-compose.yml` incluido |
-
-Si cambias de proveedor, actualiza `DATABASE_PROVIDER` y `DATABASE_URL`, ejecuta el comando `prisma:generate` correspondiente y aplica las migraciones de ese proveedor.
-
-## Instalación recomendada con MySQL
-
-No ejecutes `docker compose up` en esta opción: ese archivo es exclusivamente para PostgreSQL.
-
-1. Entra en MySQL con un usuario administrador y crea una base y un usuario propios:
-
-```sql
-CREATE DATABASE auth_template
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-CREATE USER 'auth_template'@'localhost'
-  IDENTIFIED BY 'sustituye-por-una-password-larga-y-aleatoria';
-
-GRANT ALL PRIVILEGES ON auth_template.*
-  TO 'auth_template'@'localhost';
-
-FLUSH PRIVILEGES;
-```
-
-2. Prepara el backend:
-
-```bash
-cp .env.example .env
-npm install
-```
-
-3. Configura estas dos variables en `.env`:
-
-```env
-DATABASE_PROVIDER=mysql
-DATABASE_URL=mysql://auth_template:TU_PASSWORD_CODIFICADA@127.0.0.1:3306/auth_template
-```
-
-Si usuario o contraseña contienen `@`, `:`, `/`, `#`, `%` u otros caracteres reservados, codifícalos para URL. No pegues una contraseña sin codificar en `DATABASE_URL`.
-
-4. Genera el cliente, aplica la migración, ejecuta el seed y arranca:
-
-```bash
-npm run prisma:generate:mysql
-npm run prisma:migrate:mysql
-npm run seed:mysql
-npm run dev
-```
-
-## Instalación alternativa con PostgreSQL y Docker
-
-No necesitas instalar PostgreSQL en el equipo. `docker-compose.yml` levanta PostgreSQL 17 y publica `5432` únicamente en `127.0.0.1`.
+`docker-compose.yml` levanta PostgreSQL 17 y publica `5432` únicamente en `127.0.0.1`.
 
 ```bash
 cp .env.example .env
@@ -84,17 +27,17 @@ npm install
 docker compose up -d
 ```
 
-Sustituye la configuración MySQL de `.env` por:
+La configuración debe usar el proveedor y protocolo PostgreSQL:
 
 ```env
 DATABASE_PROVIDER=postgresql
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/auth_template?schema=public
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/email_a11y_qa?schema=public
 ```
 
 El contenedor acepta además `POSTGRES_DB`, `POSTGRES_USER` y `POSTGRES_PASSWORD`. Si los cambias, utiliza exactamente los mismos valores, con la contraseña codificada para URL, dentro de `DATABASE_URL`:
 
 ```env
-POSTGRES_DB=auth_template
+POSTGRES_DB=email_a11y_qa
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 ```
@@ -102,9 +45,9 @@ POSTGRES_PASSWORD=postgres
 Después ejecuta:
 
 ```bash
-npm run prisma:generate:postgres
-npm run prisma:migrate:postgres
-npm run seed:postgres
+npm run prisma:generate
+npm run prisma:migrate
+npm run seed
 npm run dev
 ```
 
@@ -119,8 +62,8 @@ Consulta `.env.example`, que contiene todas las variables soportadas.
 | Variable | Uso |
 | --- | --- |
 | `NODE_ENV`, `PORT`, `BIND_HOST` | Entorno y listener HTTP |
-| `DATABASE_PROVIDER` | `mysql` por defecto o `postgresql`; debe coincidir con el esquema generado |
-| `DATABASE_URL` | URL con host, puerto, base, usuario y contraseña del proveedor elegido |
+| `DATABASE_PROVIDER` | Debe ser `postgresql` |
+| `DATABASE_URL` | URL PostgreSQL con host, puerto, base, usuario y contraseña |
 | `FRONTEND_URL` | URL canónica usada en emails |
 | `CORS_ALLOWED_ORIGINS` | Allowlist separada por comas; debe incluir `FRONTEND_URL` |
 | `JWT_SECRET` | Secreto de firma; en producción debe ser no obvio y tener al menos 32 bytes |
@@ -141,7 +84,7 @@ Consulta `.env.example`, que contiene todas las variables soportadas.
 
 La plantilla no incluye credenciales reales. Para un despliegue completo necesitas:
 
-1. Un usuario y una contraseña de MySQL, o la URL PostgreSQL del entorno elegido.
+1. Un usuario y una contraseña de PostgreSQL.
 2. Un `JWT_SECRET` aleatorio e independiente de cualquier password. Puedes generarlo con `openssl rand -base64 48`.
 3. Credenciales SMTP y un remitente autorizado para entregar emails.
 4. Opcionalmente, los bloques `SEED_SUPERADMIN_*`, `SEED_ADMIN_*` y `SEED_USER_*` para crear las cuentas iniciales.
@@ -200,29 +143,17 @@ Consideraciones importantes:
 
 Antes de producción, envía un correo real de verificación y otro de recuperación y confirma entrega, enlaces, remitente, SPF/DKIM y carpeta de spam.
 
-## Prisma para ambos proveedores
-
-Comandos MySQL:
+## Prisma y PostgreSQL
 
 ```bash
-npm run prisma:generate:mysql
-npm run prisma:migrate:mysql
-npm run prisma:deploy:mysql
-npm run prisma:studio:mysql
-npm run prisma:validate:mysql
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:deploy
+npm run prisma:studio
+npm run prisma:validate
 ```
 
-Comandos PostgreSQL:
-
-```bash
-npm run prisma:generate:postgres
-npm run prisma:migrate:postgres
-npm run prisma:deploy:postgres
-npm run prisma:studio:postgres
-npm run prisma:validate:postgres
-```
-
-En desarrollo usa `migrate:mysql` o `migrate:postgres`. En producción usa el `deploy` correspondiente. Nunca apliques las migraciones MySQL sobre PostgreSQL ni al revés.
+En desarrollo usa `prisma:migrate`. En producción usa `prisma:deploy`.
 
 El usuario que ejecuta migraciones necesita permisos para crear y modificar tablas, índices y claves foráneas. En producción es recomendable utilizar ese usuario solo durante el despliegue y ejecutar la aplicación con una cuenta de base de datos más limitada.
 
@@ -237,9 +168,7 @@ El usuario que ejecuta migraciones necesita permisos para crear y modificar tabl
 5. Ejecuta el comando correspondiente:
 
 ```bash
-npm run seed:mysql
-# o, con PostgreSQL:
-npm run seed:postgres
+npm run seed
 ```
 
 Cada bloque necesita `EMAIL`, `PASSWORD`, `NAME` y `LAST_NAME`. El seed valida la política de contraseña, utiliza bcrypt, marca el email como verificado, activa la cuenta y asigna exactamente `SUPERADMIN`, `ADMIN` o `USER`. Usa `upsert`, por lo que puede repetirse sin duplicar cuentas. En cuentas ya existentes actualiza el rol y el estado, pero no sustituye la contraseña.
@@ -254,12 +183,9 @@ npm start
 npm test
 npm run test:watch
 npm run lint
-npm run prisma:generate:mysql
-npm run prisma:migrate:mysql
-npm run prisma:generate:postgres
-npm run prisma:migrate:postgres
-npm run seed:mysql
-npm run seed:postgres
+npm run prisma:generate
+npm run prisma:migrate
+npm run seed
 ```
 
 ## Endpoints
@@ -282,12 +208,15 @@ Todas las respuestas sensibles llevan `Cache-Control: no-store`.
 | `POST` | `/users` | `ADMIN` / `SUPERADMIN` | Crea una cuenta y envía su invitación |
 | `GET` | `/users?page=1&limit=20&search=` | `ADMIN` / `SUPERADMIN` | Listado paginado, máximo 100 |
 | `PATCH` | `/users/:id` | `ADMIN` / `SUPERADMIN` | Cambia `role` y/o `isActive` |
+| `POST` | `/api/v1/organizations` | Autenticado y sin organización | Crea una organización y asigna al usuario como `OWNER` |
+| `GET` | `/api/v1/organizations` | Autenticado | Lista la organización del usuario |
+| `GET` | `/api/v1/organizations/:id` | Miembro | Obtiene una organización sin permitir acceso cruzado |
 
 No existe endpoint de registro público. Las primeras cuentas se crean mediante el seed y, a partir de ahí, un `ADMIN` o `SUPERADMIN` concede acceso desde `POST /users`. La API genera una contraseña interna que no se entrega ni permite entrar, guarda únicamente el hash de la invitación y envía un enlace de un solo uso para que la persona defina su propia contraseña. Solo un `SUPERADMIN` puede crear, asignar o modificar el rol `SUPERADMIN`. Ningún administrador puede desactivarse ni cambiar su propio rol.
 
 ## Arquitectura de autenticación
 
-El access token es un JWT HS256 de 15 minutos por defecto. Solo contiene `sub`, `jti`, `iss`, `aud`, `iat` y `exp`. El middleware verifica algoritmo, firma, issuer, audience y expiración, y después consulta MySQL o PostgreSQL, según la configuración, para comprobar el usuario, su rol, su verificación y si continúa activo.
+El access token es un JWT HS256 de 15 minutos por defecto. Solo contiene `sub`, `jti`, `iss`, `aud`, `iat` y `exp`. El middleware verifica algoritmo, firma, issuer, audience y expiración, y después consulta PostgreSQL para comprobar el usuario, su rol, su verificación y si continúa activo.
 
 Las cookies son `HttpOnly`, `SameSite=Strict` y `Path=/`; en producción también son `Secure` y usan nombres con prefijo `__Host-`. El frontend nunca recibe ni lee tokens.
 
@@ -341,7 +270,7 @@ Cambiar el email exige la contraseña actual, vuelve a marcarlo como no verifica
 npm test
 ```
 
-Los tests de integración cubren ausencia de registro público, creación protegida por roles, errores genéricos de login, desactivación, verificación, caducidad a 90 días, bloqueo de rutas, renovación obligatoria, historial de tres contraseñas, rate limit, `/me`, rotación, reutilización de refresh, logout, recuperación indistinguible, reset de un uso y revocación. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren MySQL ni PostgreSQL y no emplean datos de producción.
+Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, creación de organizaciones, asignación automática de `OWNER`, pertenencia única y aislamiento entre organizaciones. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución ni emplean datos de producción.
 
 ## Despliegue detrás de proxy
 
@@ -350,7 +279,7 @@ En `NODE_ENV=production` se activa `app.set("trust proxy", 1)`, adecuado para un
 ## Checklist de producción
 
 - [ ] Generar un `JWT_SECRET` aleatorio de al menos 32 bytes
-- [ ] Elegir MySQL o PostgreSQL y generar Prisma con el esquema correcto
+- [ ] Generar Prisma y aplicar las migraciones PostgreSQL
 - [ ] Configurar la base de producción, usuario con permisos mínimos y copias de seguridad
 - [ ] Servir exclusivamente por HTTPS
 - [ ] Usar `NODE_ENV=production`
@@ -358,7 +287,7 @@ En `NODE_ENV=production` se activa `app.set("trust proxy", 1)`, adecuado para un
 - [ ] Configurar y probar SMTP y `MAIL_FROM`
 - [ ] Confirmar `PASSWORD_MAX_AGE_DAYS=90` y probar el cambio obligatorio
 - [ ] Revisar la topología de proxy y `trust proxy`
-- [ ] Ejecutar `npm run prisma:deploy:mysql` o `npm run prisma:deploy:postgres`
+- [ ] Ejecutar `npm run prisma:deploy`
 - [ ] Crear el administrador inicial de forma segura
 - [ ] Retirar o rotar las credenciales usadas para el seed
 - [ ] Ajustar rate limits al tráfico y usar store compartido si hay réplicas

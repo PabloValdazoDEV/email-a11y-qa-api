@@ -60,7 +60,7 @@ export async function listUsers({ page, limit, search }) {
   const prisma = getPrisma();
   const textFilter = (value) => ({
     contains: value,
-    ...(env.DATABASE_PROVIDER === "postgresql" ? { mode: "insensitive" } : {}),
+    mode: "insensitive",
   });
   const where = search
     ? {

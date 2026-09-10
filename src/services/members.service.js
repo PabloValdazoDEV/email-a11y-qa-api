@@ -1,33 +1,6 @@
 import { getPrisma } from "../prisma.js";
 import { AppError } from "../utils/AppError.js";
-
-const memberSelect = Object.freeze({
-  id: true,
-  role: true,
-  createdAt: true,
-  user: {
-    select: {
-      id: true,
-      name: true,
-      lastName: true,
-      email: true,
-    },
-  },
-});
-
-function publicMember(membership) {
-  return {
-    membershipId: membership.id,
-    user: {
-      id: membership.user.id,
-      name: membership.user.name,
-      lastName: membership.user.lastName,
-      email: membership.user.email,
-    },
-    role: membership.role,
-    createdAt: membership.createdAt,
-  };
-}
+import { publicMember, publicMemberSelect } from "../utils/publicMember.js";
 
 async function getActorMembership(prisma, userId, organizationId) {
   const membership = await prisma.membership.findFirst({
@@ -44,7 +17,7 @@ async function getActorMembership(prisma, userId, organizationId) {
 async function getTargetMembership(prisma, membershipId, organizationId) {
   const membership = await prisma.membership.findFirst({
     where: { id: membershipId, organizationId },
-    select: memberSelect,
+    select: publicMemberSelect,
   });
 
   if (!membership) {
@@ -75,7 +48,7 @@ export async function listOrganizationMembers(userId, organizationId) {
 
   const memberships = await prisma.membership.findMany({
     where: { organizationId },
-    select: memberSelect,
+    select: publicMemberSelect,
     orderBy: [{ role: "asc" }, { createdAt: "asc" }],
   });
 
@@ -98,7 +71,7 @@ export async function updateOrganizationMemberRole(
     const updated = await tx.membership.update({
       where: { id: target.id },
       data: { role },
-      select: memberSelect,
+      select: publicMemberSelect,
     });
     return publicMember(updated);
   });

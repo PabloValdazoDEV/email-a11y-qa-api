@@ -11,6 +11,8 @@ import {
   organizationParamsSchema,
 } from "../utils/organizationValidation.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { organizationClientsRouter } from "./clients.routes.js";
+import { invitationsRouter } from "./invitations.routes.js";
 import { membersRouter } from "./members.routes.js";
 
 export const organizationsRouter = Router();
@@ -28,3 +30,5 @@ organizationsRouter.get(
   asyncHandler(getOrganization),
 );
 organizationsRouter.use("/:organizationId/members", membersRouter);
+organizationsRouter.use("/:organizationId/invitations", invitationsRouter);
+organizationsRouter.use("/:organizationId/clients", organizationClientsRouter);

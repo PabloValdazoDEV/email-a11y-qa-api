@@ -49,6 +49,8 @@ function membership({
       name: userId === actorUserId ? "Pablo" : "María",
       lastName: userId === actorUserId ? "Valdazo" : "López",
       email: userId === actorUserId ? "pablo@example.com" : "maria@example.com",
+      isActive: true,
+      emailVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
       role: "SUPERADMIN",
       password: "never-return-this",
     },
@@ -194,6 +196,7 @@ describe("organization member listing", () => {
     expect(member).toEqual(expect.objectContaining({
       membershipId: actorMembershipId,
       role: "OWNER",
+      status: "ACTIVE",
       createdAt: expect.any(String),
       user: expect.objectContaining({
         id: actorUserId,
@@ -204,6 +207,7 @@ describe("organization member listing", () => {
     }));
     expect(member.user).not.toHaveProperty("password");
     expect(member.user).not.toHaveProperty("role");
+    expect(member.user).not.toHaveProperty("emailVerifiedAt");
     expect(member).not.toHaveProperty("updatedAt");
   });
 

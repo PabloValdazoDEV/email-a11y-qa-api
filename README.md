@@ -214,10 +214,26 @@ Todas las respuestas sensibles llevan `Cache-Control: no-store`.
 | `GET` | `/api/v1/organizations/:organizationId/members` | Miembro | Lista los miembros y sus roles de organización |
 | `PATCH` | `/api/v1/organizations/:organizationId/members/:membershipId` | `OWNER` / `ADMIN` de organización | Cambia un rol permitido sin modificar el rol global |
 | `DELETE` | `/api/v1/organizations/:organizationId/members/:membershipId` | `OWNER` / `ADMIN` de organización | Elimina exclusivamente la membership permitida |
+| `POST` | `/api/v1/organizations/:organizationId/invitations` | `OWNER` / `ADMIN` de organización | Invita una persona o añade una cuenta existente a la organización |
+| `GET` | `/api/v1/organizations/:organizationId/clients` | Miembro | Lista únicamente los clientes activos de la organización |
+| `POST` | `/api/v1/organizations/:organizationId/clients` | `OWNER` / `ADMIN` de organización | Crea un cliente dentro de la organización solicitada |
+| `GET` | `/api/v1/clients/:clientId` | Miembro de su organización | Consulta un cliente activo sin permitir acceso cruzado |
+| `PATCH` | `/api/v1/clients/:clientId` | `OWNER` / `ADMIN` de su organización | Modifica el nombre del cliente |
+| `DELETE` | `/api/v1/clients/:clientId` | `OWNER` / `ADMIN` de su organización | Archiva el cliente sin eliminarlo físicamente |
 
 No existe endpoint de registro público. Las primeras cuentas se crean mediante el seed y, a partir de ahí, un `ADMIN` o `SUPERADMIN` concede acceso desde `POST /users`. La API genera una contraseña interna que no se entrega ni permite entrar, guarda únicamente el hash de la invitación y envía un enlace de un solo uso para que la persona defina su propia contraseña. Solo un `SUPERADMIN` puede crear, asignar o modificar el rol `SUPERADMIN`. Ningún administrador puede desactivarse ni cambiar su propio rol.
 
 Los roles globales `USER`, `ADMIN` y `SUPERADMIN` son independientes de `MembershipRole`. Dentro de una organización, `OWNER` puede gestionar `ADMIN`, `EDITOR` y `VIEWER`; un `ADMIN` de organización solo puede alternar o eliminar `EDITOR` y `VIEWER`. `OWNER` nunca puede reasignarse ni eliminarse mediante estas rutas. Todas las operaciones comprueban conjuntamente la organización solicitada, la membership del actor y la membership objetivo.
+
+La invitación de organización acepta `name`, `lastName`, `email` y `role`. Nombre y apellidos solo se usan al crear una cuenta nueva; una cuenta existente no se modifica. Las cuentas nuevas reciben siempre el rol global `USER`, un password interno no utilizable y un token opaco de un solo uso para definir su propia contraseña. La membership se crea en la misma transacción y aparece como `INVITATION_PENDING` hasta que el usuario establece su contraseña. Las cuentas ya verificadas aparecen como `ACTIVE` y las desactivadas como `INACTIVE`.
+
+Un `OWNER` puede invitar `ADMIN`, `EDITOR` o `VIEWER`. Un `ADMIN` de organización solo puede invitar `EDITOR` o `VIEWER`; `EDITOR` y `VIEWER` no pueden invitar. Si el email ya pertenece a una cuenta activa sin organización, únicamente se crea la membership: no se cambia el password, el rol global ni se envía un nuevo email. La restricción única de `Membership.userId` impide que una persona pertenezca a más de una organización.
+
+## Clientes de organización
+
+Cada `Client` pertenece obligatoriamente a una única organización. Su nombre admite hasta 120 caracteres y `archivedAt` implementa el archivado lógico: `DELETE` conserva la fila y los listados, consultas y escrituras normales excluyen clientes archivados. No existe restauración ni listado de archivados en este hito.
+
+Todos los miembros pueden listar y consultar clientes de su propia organización. Solamente `OWNER` y `ADMIN` de organización pueden crear, editar o archivar; `EDITOR` y `VIEWER` tienen acceso de lectura. Estas decisiones ignoran el rol global y cada consulta valida conjuntamente el usuario autenticado, la organización propietaria y el cliente solicitado.
 
 ## Arquitectura de autenticación
 
@@ -275,7 +291,7 @@ Cambiar el email exige la contraseña actual, vuelve a marcarlo como no verifica
 npm test
 ```
 
-Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, creación de organizaciones, asignación automática de `OWNER`, pertenencia única y aislamiento entre organizaciones. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución ni emplean datos de producción.
+Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, organizaciones, memberships, invitaciones, clientes, archivado lógico y aislamiento multi-tenant. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución, no envían correos y no emplean datos de producción.
 
 ## Despliegue detrás de proxy
 

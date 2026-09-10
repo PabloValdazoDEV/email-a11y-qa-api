@@ -215,11 +215,12 @@ Todas las respuestas sensibles llevan `Cache-Control: no-store`.
 | `PATCH` | `/api/v1/organizations/:organizationId/members/:membershipId` | `OWNER` / `ADMIN` de organización | Cambia un rol permitido sin modificar el rol global |
 | `DELETE` | `/api/v1/organizations/:organizationId/members/:membershipId` | `OWNER` / `ADMIN` de organización | Elimina exclusivamente la membership permitida |
 | `POST` | `/api/v1/organizations/:organizationId/invitations` | `OWNER` / `ADMIN` de organización | Invita una persona o añade una cuenta existente a la organización |
-| `GET` | `/api/v1/organizations/:organizationId/clients` | Miembro | Lista únicamente los clientes activos de la organización |
+| `GET` | `/api/v1/organizations/:organizationId/clients` | Miembro | Lista los clientes activos y archivados de la organización |
 | `POST` | `/api/v1/organizations/:organizationId/clients` | `OWNER` / `ADMIN` de organización | Crea un cliente dentro de la organización solicitada |
 | `GET` | `/api/v1/clients/:clientId` | Miembro de su organización | Consulta un cliente activo sin permitir acceso cruzado |
 | `PATCH` | `/api/v1/clients/:clientId` | `OWNER` / `ADMIN` de su organización | Modifica el nombre del cliente |
 | `DELETE` | `/api/v1/clients/:clientId` | `OWNER` / `ADMIN` de su organización | Archiva el cliente sin eliminarlo físicamente |
+| `PATCH` | `/api/v1/clients/:clientId/restore` | `OWNER` / `ADMIN` de su organización | Restaura un cliente archivado |
 | `GET` | `/api/v1/clients/:clientId/campaigns` | Miembro de su organización | Lista las campañas activas del cliente activo |
 | `POST` | `/api/v1/clients/:clientId/campaigns` | `OWNER` / `ADMIN` de su organización | Crea una campaña dentro del cliente activo |
 | `GET` | `/api/v1/campaigns/:campaignId` | Miembro de su organización | Consulta una campaña activa mediante su cliente propietario |
@@ -240,9 +241,9 @@ Un `OWNER` puede invitar `ADMIN`, `EDITOR` o `VIEWER`. Un `ADMIN` de organizaci�
 
 ## Clientes de organización
 
-Cada `Client` pertenece obligatoriamente a una única organización. Su nombre admite hasta 120 caracteres y `archivedAt` implementa el archivado lógico: `DELETE` conserva la fila y los listados, consultas y escrituras normales excluyen clientes archivados. No existe restauración ni listado de archivados en este hito.
+Cada `Client` pertenece obligatoriamente a una única organización. Su nombre admite hasta 120 caracteres y `archivedAt` implementa el archivado lógico: `DELETE` conserva la fila y el listado devuelve primero los clientes activos y después los archivados. Un cliente archivado no permite abrir el detalle, editarlo ni acceder a sus campañas hasta que un `OWNER` o `ADMIN` lo restaure.
 
-Todos los miembros pueden listar y consultar clientes de su propia organización. Solamente `OWNER` y `ADMIN` de organización pueden crear, editar o archivar; `EDITOR` y `VIEWER` tienen acceso de lectura. Estas decisiones ignoran el rol global y cada consulta valida conjuntamente el usuario autenticado, la organización propietaria y el cliente solicitado.
+Todos los miembros pueden listar los clientes de su propia organización y consultar los que estén activos. Solamente `OWNER` y `ADMIN` de organización pueden crear, editar, archivar o restaurar; `EDITOR` y `VIEWER` tienen acceso de lectura. Estas decisiones ignoran el rol global y cada consulta valida conjuntamente el usuario autenticado, la organización propietaria y el cliente solicitado.
 
 ## Campañas de cliente
 

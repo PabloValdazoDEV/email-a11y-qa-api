@@ -30,3 +30,5 @@ export const updateClientSchema = z
     name: clientNameSchema,
   })
   .strict();
+
+export const restoreClientSchema = z.object({}).strict();

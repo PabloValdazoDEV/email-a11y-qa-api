@@ -64,13 +64,12 @@ function createPrismaMock() {
       : null);
 
   prisma.client.findMany.mockImplementation(async ({ where }) =>
-    where.organizationId === organizationId && where.archivedAt === null
-      ? [prisma.clientRecord].filter((record) => record.archivedAt === null)
-      : []);
+    where.organizationId === organizationId ? [prisma.clientRecord] : []);
 
   prisma.client.findFirst.mockImplementation(async ({ where }) => {
     if (where.id !== prisma.clientRecord.id) return null;
     if (where.archivedAt === null && prisma.clientRecord.archivedAt !== null) return null;
+    if (where.archivedAt?.not === null && prisma.clientRecord.archivedAt === null) return null;
     return prisma.clientRecord;
   });
 
@@ -102,6 +101,13 @@ function nestedRequest(method, requestedOrganizationId = organizationId) {
 function directRequest(method, requestedClientId = clientId) {
   return request(app)
     [method](`/api/v1/clients/${requestedClientId}`)
+    .set("Origin", origin)
+    .set("Cookie", authCookie());
+}
+
+function restoreRequest(requestedClientId = clientId) {
+  return request(app)
+    .patch(`/api/v1/clients/${requestedClientId}/restore`)
     .set("Origin", origin)
     .set("Cookie", authCookie());
 }
@@ -178,21 +184,34 @@ describe("client listing", () => {
     expect(prisma.client.findMany).not.toHaveBeenCalled();
   });
 
-  test("filters by organization and excludes archived clients", async () => {
+  test("filters by organization and includes active and archived clients", async () => {
     await nestedRequest("get");
 
     expect(prisma.client.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { organizationId, archivedAt: null },
+      where: { organizationId },
     }));
   });
 
-  test("does not return an archived client", async () => {
-    prisma.clientRecord = client({ archivedAt: new Date() });
+  test("returns an archived client marked with archivedAt", async () => {
+    prisma.clientRecord = client({ archivedAt: new Date("2026-09-11T00:00:00.000Z") });
 
     const response = await nestedRequest("get");
 
     expect(response.status).toBe(200);
-    expect(response.body.clients).toEqual([]);
+    expect(response.body.clients).toHaveLength(1);
+    expect(response.body.clients[0].archivedAt).toBe("2026-09-11T00:00:00.000Z");
+  });
+
+  test("places active clients before archived clients", async () => {
+    prisma.client.findMany.mockResolvedValue([
+      client({ id: "66666666-6666-4666-8666-666666666666", name: "Archivado", archivedAt: new Date() }),
+      client({ name: "Activo" }),
+    ]);
+
+    const response = await nestedRequest("get");
+
+    expect(response.status).toBe(200);
+    expect(response.body.clients.map((item) => item.name)).toEqual(["Activo", "Archivado"]);
   });
 });
 
@@ -298,5 +317,65 @@ describe("client archiving", () => {
       data: { archivedAt: expect.any(Date) },
     }));
     expect(prisma.client.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("client restoration", () => {
+  test.each(["OWNER", "ADMIN"])("a %s can restore an archived client", async (role) => {
+    prisma.actorRole = role;
+    prisma.clientRecord = client({ archivedAt: new Date("2026-09-11T00:00:00.000Z") });
+
+    const response = await restoreRequest().send({});
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Cliente restaurado");
+    expect(response.body.client.archivedAt).toBeNull();
+  });
+
+  test.each(["EDITOR", "VIEWER"])("a %s cannot restore an archived client", async (role) => {
+    prisma.actorRole = role;
+    prisma.clientRecord = client({ archivedAt: new Date() });
+
+    const response = await restoreRequest().send({});
+
+    expect(response.status).toBe(403);
+    expect(prisma.client.update).not.toHaveBeenCalled();
+  });
+
+  test("cannot restore a client belonging to another organization", async () => {
+    prisma.clientRecord = client({ organizationId: otherOrganizationId, archivedAt: new Date() });
+
+    const response = await restoreRequest().send({});
+
+    expect(response.status).toBe(404);
+    expect(prisma.client.update).not.toHaveBeenCalled();
+  });
+
+  test("cannot restore an active client", async () => {
+    const response = await restoreRequest().send({});
+
+    expect(response.status).toBe(404);
+    expect(prisma.client.update).not.toHaveBeenCalled();
+  });
+
+  test("restoration rejects unexpected body fields", async () => {
+    prisma.clientRecord = client({ archivedAt: new Date() });
+
+    const response = await restoreRequest().send({ organizationId: otherOrganizationId });
+
+    expect(response.status).toBe(400);
+    expect(prisma.client.update).not.toHaveBeenCalled();
+  });
+
+  test("restoration clears archivedAt and never physically recreates the client", async () => {
+    prisma.clientRecord = client({ archivedAt: new Date() });
+
+    await restoreRequest().send({});
+
+    expect(prisma.client.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: clientId },
+      data: { archivedAt: null },
+    }));
+    expect(prisma.client.create).not.toHaveBeenCalled();
   });
 });

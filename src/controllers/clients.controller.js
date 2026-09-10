@@ -3,6 +3,7 @@ import {
   createOrganizationClient,
   getClientForUser,
   listOrganizationClients,
+  restoreClientForUser,
   updateClientForUser,
 } from "../services/clients.service.js";
 
@@ -40,4 +41,9 @@ export async function patchClient(req, res) {
 export async function deleteClient(req, res) {
   const client = await archiveClientForUser(req.auth.userId, req.params.clientId);
   res.json({ message: "Cliente archivado", client });
+}
+
+export async function restoreClient(req, res) {
+  const client = await restoreClientForUser(req.auth.userId, req.params.clientId);
+  res.json({ message: "Cliente restaurado", client });
 }

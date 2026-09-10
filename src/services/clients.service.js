@@ -38,14 +38,30 @@ async function getActiveClient(prisma, clientId) {
   return client;
 }
 
+async function getArchivedClient(prisma, clientId) {
+  const client = await prisma.client.findFirst({
+    where: { id: clientId, archivedAt: { not: null } },
+    select: clientSelect,
+  });
+  if (!client) {
+    throw new AppError(404, "Cliente no encontrado");
+  }
+  return client;
+}
+
 export async function listOrganizationClients(userId, organizationId) {
   const prisma = getPrisma();
   await getMembership(prisma, userId, organizationId, "Organización no encontrada");
 
-  return prisma.client.findMany({
-    where: { organizationId, archivedAt: null },
+  const clients = await prisma.client.findMany({
+    where: { organizationId },
     select: clientSelect,
     orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+  });
+
+  return clients.sort((first, second) => {
+    const archivedOrder = Number(Boolean(first.archivedAt)) - Number(Boolean(second.archivedAt));
+    return archivedOrder || first.name.localeCompare(second.name, "es");
   });
 }
 
@@ -115,6 +131,27 @@ export async function archiveClientForUser(userId, clientId) {
     return tx.client.update({
       where: { id: client.id },
       data: { archivedAt: new Date() },
+      select: clientSelect,
+    });
+  });
+}
+
+export async function restoreClientForUser(userId, clientId) {
+  const prisma = getPrisma();
+
+  return prisma.$transaction(async (tx) => {
+    const client = await getArchivedClient(tx, clientId);
+    const membership = await getMembership(
+      tx,
+      userId,
+      client.organizationId,
+      "Cliente no encontrado",
+    );
+    assertCanManageClients(membership.role);
+
+    return tx.client.update({
+      where: { id: client.id },
+      data: { archivedAt: null },
       select: clientSelect,
     });
   });

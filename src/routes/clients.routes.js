@@ -5,6 +5,7 @@ import {
   getClient,
   getClients,
   patchClient,
+  restoreClient,
 } from "../controllers/clients.controller.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -13,6 +14,7 @@ import {
   clientParamsSchema,
   createClientSchema,
   organizationClientsParamsSchema,
+  restoreClientSchema,
   updateClientSchema,
 } from "../utils/clientValidation.js";
 import { clientCampaignsRouter } from "./campaigns.routes.js";
@@ -36,6 +38,12 @@ export const clientsRouter = Router();
 clientsRouter.use(authMiddleware);
 clientsRouter.use("/:clientId/campaigns", clientCampaignsRouter);
 clientsRouter.get("/:clientId", validate(clientParamsSchema, "params"), asyncHandler(getClient));
+clientsRouter.patch(
+  "/:clientId/restore",
+  validate(clientParamsSchema, "params"),
+  validate(restoreClientSchema),
+  asyncHandler(restoreClient),
+);
 clientsRouter.patch(
   "/:clientId",
   validate(clientParamsSchema, "params"),

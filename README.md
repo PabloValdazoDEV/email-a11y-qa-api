@@ -225,6 +225,10 @@ Todas las respuestas sensibles llevan `Cache-Control: no-store`.
 | `GET` | `/api/v1/campaigns/:campaignId` | Miembro de su organización | Consulta una campaña activa mediante su cliente propietario |
 | `PATCH` | `/api/v1/campaigns/:campaignId` | `OWNER` / `ADMIN` de su organización | Modifica el nombre de la campaña |
 | `DELETE` | `/api/v1/campaigns/:campaignId` | `OWNER` / `ADMIN` de su organización | Archiva la campaña sin eliminarla físicamente |
+| `GET` | `/api/v1/campaigns/:campaignId/draft` | Miembro de su organización | Consulta el borrador actual de una campaña activa |
+| `PUT` | `/api/v1/campaigns/:campaignId/draft` | `OWNER` / `ADMIN` / `EDITOR` | Crea o sustituye completamente el borrador pegando HTML |
+| `PATCH` | `/api/v1/campaigns/:campaignId/draft` | `OWNER` / `ADMIN` / `EDITOR` | Modifica únicamente el HTML de trabajo |
+| `POST` | `/api/v1/campaigns/:campaignId/draft/import` | `OWNER` / `ADMIN` / `EDITOR` | Importa un archivo `.html` o `.htm` en memoria |
 
 No existe endpoint de registro público. Las primeras cuentas se crean mediante el seed y, a partir de ahí, un `ADMIN` o `SUPERADMIN` concede acceso desde `POST /users`. La API genera una contraseña interna que no se entrega ni permite entrar, guarda únicamente el hash de la invitación y envía un enlace de un solo uso para que la persona defina su propia contraseña. Solo un `SUPERADMIN` puede crear, asignar o modificar el rol `SUPERADMIN`. Ningún administrador puede desactivarse ni cambiar su propio rol.
 
@@ -245,6 +249,14 @@ Todos los miembros pueden listar y consultar clientes de su propia organización
 Cada `Campaign` pertenece obligatoriamente a un único `Client`. `archivedAt` implementa el archivado lógico y los endpoints normales excluyen campañas archivadas y campañas cuyo cliente esté archivado. Archivar un cliente conserva todas sus campañas; la clave foránea usa `ON DELETE RESTRICT` para evitar borrados físicos en cascada.
 
 Todos los roles de organización pueden listar y consultar campañas del cliente al que pertenecen. Solamente `OWNER` y `ADMIN` pueden crear, cambiar el nombre o archivar. El backend no utiliza roles globales para autorizar estas operaciones y valida siempre la cadena `Campaign → Client → Organization → Membership`. `clientId` procede exclusivamente de la URL y no puede modificarse mediante el body.
+
+## Borrador HTML
+
+Cada Campaign puede tener como máximo un `Draft`, garantizado por el índice único de `campaignId`. En la primera creación, al pegar HTML o importarlo desde `.html`/`.htm`, `htmlOriginal` y `htmlCurrent` reciben exactamente el mismo contenido. Una edición ordinaria modifica solo `htmlCurrent`; una sustitución completa vuelve a actualizar ambos campos. No existe historial todavía.
+
+El límite autoritativo es 1 MiB y está centralizado en `src/config/draft.js`. Los cuerpos JSON de Draft disponen de un parser específico sin aumentar el límite general de 64 KiB. Los archivos multipart se procesan con Multer en memoria, uno por petición, y se validan por extensión, MIME cuando es concluyente, tamaño, UTF-8 y presencia de estructura HTML. No se guardan archivos en disco, no se corrige ni sanitiza el contenido y nunca se escribe el HTML en logs.
+
+`OWNER`, `ADMIN` y `EDITOR` pueden crear, sustituir y editar el borrador. `VIEWER` puede consultarlo. La autorización recorre `Draft → Campaign → Client → Organization → Membership`; Campaign y Client archivados bloquean el acceso normal, pero el Draft permanece almacenado. La clave foránea usa `ON DELETE RESTRICT` para impedir borrados en cascada.
 
 ## Arquitectura de autenticación
 
@@ -302,7 +314,7 @@ Cambiar el email exige la contraseña actual, vuelve a marcarlo como no verifica
 npm test
 ```
 
-Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, organizaciones, memberships, invitaciones, clientes, campañas, archivado lógico y aislamiento multi-tenant. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución, no envían correos y no emplean datos de producción. Las migraciones y el comportamiento transaccional se comprueban además contra PostgreSQL real sin conservar datos de prueba.
+Los tests de integración cubren autenticación, recuperación, sesiones, roles globales, organizaciones, memberships, invitaciones, clientes, campañas, borradores HTML, importación multipart, archivado lógico y aislamiento multi-tenant. Sustituyen Prisma únicamente bajo `NODE_ENV=test`; no requieren una base PostgreSQL en ejecución, no envían correos y no emplean datos de producción. Las migraciones, restricciones y persistencia se comprueban además contra PostgreSQL real sin conservar datos de prueba.
 
 ## Despliegue detrás de proxy
 

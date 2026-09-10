@@ -15,6 +15,7 @@ import {
   createCampaignSchema,
   updateCampaignSchema,
 } from "../utils/campaignValidation.js";
+import { draftsRouter } from "./drafts.routes.js";
 
 export const clientCampaignsRouter = Router({ mergeParams: true });
 
@@ -33,6 +34,7 @@ clientCampaignsRouter.post(
 export const campaignsRouter = Router();
 
 campaignsRouter.use(authMiddleware);
+campaignsRouter.use("/:campaignId/draft", draftsRouter);
 campaignsRouter.get(
   "/:campaignId",
   validate(campaignParamsSchema, "params"),

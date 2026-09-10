@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { draftConfig } from "./config/draft.js";
 import { env } from "./config/env.js";
 import { corsMiddleware } from "./config/cors.js";
 import { csrfProtection } from "./middleware/csrf.js";
@@ -35,6 +36,10 @@ export function createApp() {
   app.use(cookieParser());
   app.use(csrfProtection);
   app.use(requireJson);
+  app.use(
+    "/api/v1/campaigns/:campaignId/draft",
+    express.json({ limit: draftConfig.jsonBodyMaxBytes, strict: true }),
+  );
   app.use(express.json({ limit: "64kb", strict: true }));
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));

@@ -5,7 +5,7 @@ export function notFoundHandler(_req, _res, next) {
   next(new AppError(404, "Ruta no encontrada"));
 }
 
-export function errorHandler(error, _req, res, _next) {
+export function errorHandler(error, req, res, _next) {
   if (error instanceof AppError) {
     res.status(error.statusCode).json({
       message: error.message,
@@ -30,7 +30,16 @@ export function errorHandler(error, _req, res, _next) {
   }
 
   if (env.NODE_ENV !== "test") {
-    console.error("Internal request error", error);
+    if (req.path.includes("/draft")) {
+      console.error("Internal draft request error", {
+        method: req.method,
+        path: req.path,
+        errorName: error?.name,
+        errorCode: error?.code,
+      });
+    } else {
+      console.error("Internal request error", error);
+    }
   }
   res.status(500).json({
     message: env.isProduction ? "Error interno del servidor" : "No se pudo completar la solicitud",

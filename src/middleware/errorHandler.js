@@ -30,8 +30,8 @@ export function errorHandler(error, req, res, _next) {
   }
 
   if (env.NODE_ENV !== "test") {
-    if (req.path.includes("/draft")) {
-      console.error("Internal draft request error", {
+    if (req.path.includes("/draft") || req.path.includes("/revision")) {
+      console.error("Internal confidential content request error", {
         method: req.method,
         path: req.path,
         errorName: error?.name,

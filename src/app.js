@@ -12,6 +12,7 @@ import { authRouter } from "./routes/auth.routes.js";
 import { campaignsRouter } from "./routes/campaigns.routes.js";
 import { clientsRouter } from "./routes/clients.routes.js";
 import { organizationsRouter } from "./routes/organizations.routes.js";
+import { revisionsRouter } from "./routes/revisions.routes.js";
 import { usersRouter } from "./routes/users.routes.js";
 
 export function createApp() {
@@ -48,6 +49,7 @@ export function createApp() {
   app.use("/api/v1/organizations", organizationsRouter);
   app.use("/api/v1/clients", clientsRouter);
   app.use("/api/v1/campaigns", campaignsRouter);
+  app.use("/api/v1/revisions", revisionsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

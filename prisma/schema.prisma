@@ -37,6 +37,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   emailVerificationTokens EmailVerificationToken[]
   membership              Membership?
+  revisionsCreated        Revision[]               @relation("RevisionCreatedBy")
 }
 
 model PasswordHistory {
@@ -124,14 +125,15 @@ model Client {
 }
 
 model Campaign {
-  id         String   @id @default(uuid()) @db.Uuid
-  clientId   String   @db.Uuid
-  name       String   @db.VarChar(120)
+  id         String     @id @default(uuid()) @db.Uuid
+  clientId   String     @db.Uuid
+  name       String     @db.VarChar(120)
   archivedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  client     Client     @relation(fields: [clientId], references: [id], onDelete: Restrict)
   draft      Draft?
+  revisions  Revision[]
 
   @@index([clientId, archivedAt])
 }
@@ -144,4 +146,21 @@ model Draft {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   campaign     Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+}
+
+model Revision {
+  id              String   @id @default(uuid()) @db.Uuid
+  campaignId      String   @db.Uuid
+  version         Int
+  htmlOriginal    String   @db.Text
+  htmlCorrected   String   @db.Text
+  contentHash     String   @db.Char(64)
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now())
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  createdBy       User     @relation("RevisionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([campaignId, version])
+  @@index([campaignId, createdAt])
+  @@index([createdByUserId])
 }
